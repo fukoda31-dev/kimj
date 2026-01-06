@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule</title>
+
+<style>
+/* ===== GLOBAL ===== */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f4f6f5;
+}
+
+/* ===== HEADER ===== */
+.top-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 5px 25px;
+    background: #2e8b22;
+    color: white;
+}
+.header-logo { width: 80px; }
+h2 { text-align: center; margin: 20px 0; }
+
+/* ===== TABLE CONTAINER ===== */
+.table-container {
+    margin: 0 20px;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* SCROLL AREA */
+.table-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 420px;
+    border: 1px solid #999;
+}
+
+/* TABLE */
+table {
+    border-collapse: collapse;
+    min-width: 1500px;
+    width: 100%;
+}
+thead th {
+    position: sticky;
+    top: 0;
+    background: #f2f2f2;
+    z-index: 2;
+    border-bottom: 2px solid #555;
+}
+th, td {
+    border: 1px solid #444;
+    padding: 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+tbody tr:nth-child(even) { background: #e6e6e6; }
+
+/* ACTION COLUMN */
+.header-controls { text-align: center; }
+#editAllBtn, #deleteModeBtn, #confirmDeleteBtn { padding: 4px 8px; margin: 2px; cursor: pointer; }
+.selectable { cursor: pointer; }
+.selected-for-delete { background: #ffcccc !important; }
+
+/* SET BUTTON */
+#setScheduleBtn {
+    float: right;
+    margin: 15px 20px;
+    padding: 8px 22px;
+    background: #2ecc71;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.clearfix::after { content: ""; display: block; clear: both; }
+
+/* MODAL */
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+.modal-content {
+    background: #fff;
+    width: 90%;
+    max-width: 450px;
+    padding: 25px;
+    border-radius: 10px;
+    text-align: center;
+    animation: popup 0.3s ease;
+}
+.modal-logo { width: 60px; margin-bottom: 15px; }
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+.modal-buttons button { padding: 6px 16px; cursor: pointer; }
+@keyframes popup {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+<header class="top-header">
+    <img src="plsp.png" class="header-logo">
+    <div>
+        <h1>Pamantasan ng Lungsod ng San Pablo</h1>
+        <p>Prime to Lead and Serve for Progress!</p>
+    </div>
+</header>
+
+<h2>Schedule</h2>
+
+<div class="table-container">
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Instructor</th>
+                    <th>Day</th>
+                    <th>Time</th>
+                    <th>Course Code & Title</th>
+                    <th>Type of Modality</th>
+                    <th>Room</th>
+                    <th>Year & Section</th>
+                    <th>Unit</th>
+                    <th>Semester</th>
+                    <th>SY</th>
+                    <th>College</th>
+                    <th class="header-controls">
+                        <div class="action-buttons">
+                            <button onclick="enableEditAll()" id="editAllBtn">✎ Edit</button>
+                            <button onclick="toggleDeleteMode()" id="deleteModeBtn">🗑</button>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="clearfix"></div>
+</div>
+
+<button id="setScheduleBtn">Set</button>
+
+<!-- MODAL -->
+<div class="modal" id="modalForm">
+    <div class="modal-content">
+        <img src="share.jpg" class="modal-logo" alt="Share">
+        <h3>Please confirm sending the schedule to all teaching personnel.</h3>
+        <div class="modal-buttons">
+            <button id="cancelBtn">Cancel</button>
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ===== EDIT/DELETE JS ===== */
+let editMode = false;
+let deleteMode = false;
+
+function enableEditAll() {
+    editMode = !editMode;
+    document.querySelectorAll('tbody tr').forEach(row => {
+        for (let i = 1; i < row.cells.length - 1; i++) {
+            row.cells[i].contentEditable = editMode;
+            row.cells[i].style.backgroundColor = editMode ? '#fffbe6' : '';
+        }
+    });
+    document.getElementById('editAllBtn').textContent = editMode ? '💾 Done' : '✎ Edit';
+}
+
+function toggleDeleteMode() {
+    deleteMode = !deleteMode;
+    const actionContainer = document.querySelector('.action-buttons');
+
+    document.querySelectorAll('tbody tr').forEach(row => {
+        row.classList.toggle('selectable', deleteMode);
+        row.classList.remove('selected-for-delete');
+    });
+
+    let confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    if (deleteMode) {
+        // Only create the confirm button if it doesn't exist
+        if (!confirmBtn) {
+            confirmBtn = document.createElement('button');
+            confirmBtn.id = 'confirmDeleteBtn';
+            confirmBtn.textContent = 'Confirm Delete';
+            confirmBtn.style.marginRight = '8px';
+            confirmBtn.className = 'btn btn-save';
+            confirmBtn.onclick = confirmDelete;
+            // Insert before Delete button in same column
+            const deleteBtn = document.getElementById('deleteModeBtn');
+            actionContainer.insertBefore(confirmBtn, deleteBtn);
+        }
+    } else {
+        // Remove the button when exiting delete mode
+        if (confirmBtn) confirmBtn.remove();
+    }
+}
+
+document.addEventListener('click', function (e) {
+    const tr = e.target.closest('tbody tr');
+    if (!tr) return;
+    if (tr.classList.contains('selectable')) {
+        tr.classList.toggle('selected-for-delete');
+    }
+});
+
+function confirmDelete() {
+    const selected = document.querySelectorAll('tbody tr.selected-for-delete');
+    if (!selected.length) { 
+        alert('No rows selected'); 
+        return; 
+    }
+    if (!confirm(`Delete ${selected.length} selected row(s)?`)) return;
+    selected.forEach(r => r.remove());
+    toggleDeleteMode(); // hide confirm button after delete
+}
+
+
+
+
+
+/* ===== MODAL JS ===== */
+const modal = document.getElementById("modalForm");
+const setBtn = document.getElementById("setScheduleBtn");
+const cancelBtn = document.getElementById("cancelBtn");
+const sendBtn = document.getElementById("sendBtn");
+
+setBtn.addEventListener("click", () => {
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+});
+
+cancelBtn.addEventListener("click", () => {
+    modal.style.display = "none";
+    document.body.style.overflow = "auto";
+});
+
+sendBtn.addEventListener("click", () => {
+    alert("Schedule sent to all teaching personnel.");
+    modal.style.display = "none";
+    document.body.style.overflow = "auto";
+});
+
+modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+});
+</script>
+</body>
+</html>
